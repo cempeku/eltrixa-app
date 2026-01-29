@@ -108,7 +108,7 @@ const App: React.FC = () => {
             </div>
 
             <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] pt-4">
-              ELTRIXA SYSTEM CORE • V1.3.1 • PRO-GRADE
+              ELTRIXA SYSTEM CORE • V1.3.2 • PRO-GRADE
             </p>
           </div>
         </div>
