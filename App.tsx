@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Login } from './components/Login';
 import { Layout } from './components/Layout';
@@ -6,10 +5,10 @@ import { Search } from './components/Search';
 import { Arrears } from './components/Arrears';
 import { Entry } from './components/Entry';
 import { Admin } from './components/Admin';
-import { User, Role } from './types';
+import { User, Role } from './types.ts';
 import { MOTIVATIONAL_QUOTES } from './constants';
-import { isConfigured, SUPABASE_URL } from './services/supabaseClient';
-import { Database, Settings2, RefreshCw, Globe, ChevronRight } from 'lucide-react';
+import { isConfigured } from './services/supabaseClient';
+import { RefreshCw, Globe } from 'lucide-react';
 
 const ECGLine = () => (
   <svg className="w-[200%] h-24 text-cyan-500/15 animate-ecg-scroll" viewBox="0 0 1000 100" preserveAspectRatio="none">
@@ -109,7 +108,7 @@ const App: React.FC = () => {
             </div>
 
             <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] pt-4">
-              ELTRIXA SYSTEM CORE • V1.2.0 • PRO-GRADE
+              ELTRIXA SYSTEM CORE • V1.2.8 • PRO-GRADE
             </p>
           </div>
         </div>
