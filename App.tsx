@@ -7,8 +7,6 @@ import { Entry } from './components/Entry';
 import { Admin } from './components/Admin';
 import { User, Role } from './types';
 import { MOTIVATIONAL_QUOTES } from './constants';
-import { isConfigured } from './services/supabaseClient';
-import { RefreshCw, Globe } from 'lucide-react';
 
 const ECGLine = () => (
   <svg className="w-[200%] h-24 text-cyan-500/15 animate-ecg-scroll" viewBox="0 0 1000 100" preserveAspectRatio="none">
@@ -27,11 +25,16 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<string | null>(null);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [configReady, setConfigReady] = useState(isConfigured());
 
   useEffect(() => {
     const savedUser = sessionStorage.getItem('eltrixa_user');
-    if (savedUser) setUser(JSON.parse(savedUser));
+    if (savedUser) {
+      try {
+        setUser(JSON.parse(savedUser));
+      } catch (e) {
+        sessionStorage.removeItem('eltrixa_user');
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -54,7 +57,8 @@ const App: React.FC = () => {
 
   const confirmLogout = () => {
     setShowLogoutModal(false);
-    setNotification(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
+    const quote = MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)];
+    setNotification(quote);
     setTimeout(() => {
       sessionStorage.removeItem('eltrixa_user');
       setUser(null);
@@ -62,59 +66,6 @@ const App: React.FC = () => {
       setActiveMenu('search');
     }, 2000);
   };
-
-  if (!configReady) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8 relative overflow-hidden hexagon-grid text-white">
-        <div className="absolute inset-0 bg-indigo-600/5 blur-[120px] animate-pulse"></div>
-        <div className="relative z-10 w-full max-w-lg animate-fade-in">
-          <div className="premium-glass p-10 rounded-[3rem] border-white/5 text-center space-y-8">
-            <div className="w-24 h-24 bg-indigo-500/20 rounded-[2rem] flex items-center justify-center mx-auto shadow-[0_0_40px_rgba(79,70,229,0.2)]">
-              <Globe size={48} className="text-indigo-400" />
-            </div>
-            
-            <div className="space-y-3">
-              <h1 className="text-2xl font-black uppercase tracking-widest italic">Ready for Cloud?</h1>
-              <p className="text-[10px] text-slate-400 font-bold leading-relaxed uppercase max-w-xs mx-auto">
-                Bapak akan menghubungkan ELTRIXA ke Cloudflare & Supabase.
-              </p>
-            </div>
-
-            <div className="space-y-4 text-left">
-               <div className="bg-black/40 p-6 rounded-2xl border border-white/5 space-y-4">
-                  <div className="flex items-center space-x-3">
-                     <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-[10px] font-black text-indigo-400">1</div>
-                     <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wide">Siapkan SQL Script di Supabase</p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                     <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-[10px] font-black text-indigo-400">2</div>
-                     <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wide">Deploy ke Cloudflare Pages</p>
-                  </div>
-                  <div className="flex items-center space-x-3">
-                     <div className="w-6 h-6 rounded-full bg-indigo-500/20 flex items-center justify-center text-[10px] font-black text-indigo-400">3</div>
-                     <p className="text-[10px] font-bold text-slate-200 uppercase tracking-wide">Input API URL & Key di Cloudflare</p>
-                  </div>
-               </div>
-            </div>
-
-            <div className="grid grid-cols-1 pt-4">
-              <button 
-                onClick={() => window.location.reload()}
-                className="w-full py-5 bg-gradient-to-r from-indigo-600 to-blue-700 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest flex items-center justify-center space-x-3 shadow-2xl active:scale-95 transition-all"
-              >
-                <RefreshCw size={18} />
-                <span>PERIKSA KONEKSI CLOUD</span>
-              </button>
-            </div>
-
-            <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] pt-4">
-              ELTRIXA SYSTEM CORE • V1.3.3 • PRO-GRADE
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   if (!user) return <Login onLogin={handleLogin} />;
 
@@ -138,7 +89,7 @@ const App: React.FC = () => {
           {activeMenu === 'search' && <Search user={user} setLoading={setLoading} />}
           {activeMenu === 'arrears' && <Arrears user={user} setLoading={setLoading} />}
           {activeMenu === 'entry' && <Entry user={user} setLoading={setLoading} />}
-          {activeMenu === 'admin' && (user.role === Role.ADMIN ? <Admin /> : <div className="p-10 text-center font-bold text-red-400">Akses Ditolak</div>)}
+          {activeMenu === 'admin' && (user.role === Role.ADMIN ? <Admin /> : <div className="p-10 text-center font-bold text-red-400 uppercase tracking-widest text-[10px]">Akses Ditolak: Khusus Administrator</div>)}
 
           {showLogoutModal && (
             <div className="fixed inset-0 z-[500] flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-md animate-fade-in">
