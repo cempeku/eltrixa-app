@@ -1,0 +1,123 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>ELTRIXA - PLN Data System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              pln: {
+                blue: '#0070ba',
+                cyan: '#06b6d4',
+                yellow: '#fbbf24',
+                red: '#ef4444',
+                dark: '#020617',
+                slate: '#1e293b',
+              }
+            },
+            animation: {
+              'blob': 'blob 10s infinite',
+              'spin-slow': 'spin 8s linear infinite',
+              'shimmer': 'shimmer 2s linear infinite',
+              'glow': 'glow 3s ease-in-out infinite',
+              'heartbeat': 'heartbeat 2s ease-in-out infinite',
+              'pulse-soft': 'pulse-soft 6s ease-in-out infinite',
+              'ecg-scroll': 'ecg-scroll 3s linear infinite',
+              'float': 'float 15s ease-in-out infinite',
+            },
+            keyframes: {
+              blob: {
+                '0%, 100%': { transform: 'translate(0px, 0px) scale(1)' },
+                '33%': { transform: 'translate(50px, -70px) scale(1.2)' },
+                '66%': { transform: 'translate(-30px, 40px) scale(0.8)' },
+              },
+              shimmer: {
+                '0%': { backgroundPosition: '-200% 0' },
+                '100%': { backgroundPosition: '200% 0' },
+              },
+              glow: {
+                '0%, 100%': { opacity: 0.3, filter: 'blur(20px)' },
+                '50%': { opacity: 0.6, filter: 'blur(35px)' },
+              },
+              heartbeat: {
+                '0%, 100%': { transform: 'scale(1)', opacity: '0.2' },
+                '10%': { transform: 'scale(1.15)', opacity: '0.45' },
+                '20%': { transform: 'scale(1)', opacity: '0.2' },
+              },
+              'pulse-soft': {
+                '0%, 100%': { opacity: '0.08' },
+                '50%': { opacity: '0.25' },
+              },
+              'ecg-scroll': {
+                '0%': { transform: 'translateX(0)' },
+                '100%': { transform: 'translateX(-50%)' }
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0) rotate(0deg)' },
+                '50%': { transform: 'translateY(-40px) rotate(5deg)' }
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+      
+      :root {
+        --glass: rgba(15, 23, 42, 0.6);
+        --border: rgba(255, 255, 255, 0.08);
+      }
+
+      body {
+        background-color: #020617;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        color: #e2e8f0;
+        overflow-x: hidden;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      
+      .premium-glass {
+        background: var(--glass);
+        backdrop-filter: blur(20px) saturate(180%);
+        border: 1px solid var(--border);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      }
+
+      .hexagon-grid {
+        background-image: url("data:image/svg+xml,%3Csvg width='60' height='104' viewBox='0 0 60 104' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 0l30 17.32v34.64L30 69.28 0 51.96V17.32L30 0zM0 86.6l30 17.32 30-17.32v-17.32L30 51.96 0 69.28v17.32z' fill='%2322d3ee' fill-opacity='0.06' fill-rule='evenodd'/%3E%3C/svg%3E");
+      }
+
+      .ecg-line {
+        mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+        -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.563.0",
+    "xlsx": "https://esm.sh/xlsx@^0.18.5",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@^2.91.1",
+    "vite": "https://esm.sh/vite@^7.3.1",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+</body>
+</html>
