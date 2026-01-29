@@ -5,7 +5,7 @@ import { Search } from './components/Search';
 import { Arrears } from './components/Arrears';
 import { Entry } from './components/Entry';
 import { Admin } from './components/Admin';
-import { User, Role } from './types.ts';
+import { User, Role } from './types';
 import { MOTIVATIONAL_QUOTES } from './constants';
 import { isConfigured } from './services/supabaseClient';
 import { RefreshCw, Globe } from 'lucide-react';
@@ -108,7 +108,7 @@ const App: React.FC = () => {
             </div>
 
             <p className="text-[8px] font-black text-slate-600 uppercase tracking-[0.2em] pt-4">
-              ELTRIXA SYSTEM CORE • V1.2.8 • PRO-GRADE
+              ELTRIXA SYSTEM CORE • V1.3.0 • PRO-GRADE
             </p>
           </div>
         </div>
