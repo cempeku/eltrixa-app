@@ -16,7 +16,8 @@ import {
   UserSearch,
   Hash,
   Copy,
-  CheckCheck
+  CheckCheck,
+  UserCheck
 } from 'lucide-react';
 
 interface SearchProps {
@@ -52,6 +53,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     try {
       let data: Customer[] = [];
       if (/^\d+$/.test(cleanKeyword)) {
+        // Pencarian IDPEL -> Mengambil 10 baris (5 sebelum, 4 sesudah)
         data = await api.searchCustomers(cleanKeyword);
       } else {
         data = await api.searchByName(cleanKeyword.toUpperCase());
@@ -71,6 +73,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     setSearched(true);
     setCurrentPage(1);
     try {
+      // Filter hanya untuk petugas yang sedang login
       const data = await api.searchByCriteria(user.username, selectedDay);
       setResults(data);
       playSound(data.length > 0 ? 'success' : 'error');
@@ -92,6 +95,8 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
              </div>
              <input 
                type="text" 
+               inputMode="numeric"
+               pattern="[0-9]*"
                value={keyword}
                onChange={(e) => setKeyword(e.target.value)}
                placeholder="IDPEL, Nama, No Meter..." 
@@ -132,10 +137,11 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
 
         {displayed.map((c, i) => {
           const isExactMatch = c.idpel === keyword;
-          // Gunakan koordinat jika ada, jika tidak gunakan Nama+Alamat
+          // Memperbaiki koordinat terbalik: Database (x=Lng, y=Lat) -> Maps (Lat,Lng)
+          // Maka query: y,x
           const hasCoords = c.koordinat_x && c.koordinat_y;
           const mapUrl = hasCoords 
-            ? `https://www.google.com/maps/search/?api=1&query=${c.koordinat_x},${c.koordinat_y}`
+            ? `https://www.google.com/maps/search/?api=1&query=${c.koordinat_y},${c.koordinat_x}`
             : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.nama + ' ' + c.alamat)}`;
           
           return (
@@ -145,8 +151,8 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2.5 mb-1">
                       <Zap size={14} className="text-yellow-400 shrink-0" />
-                      {/* Font nama diperkecil dari text-sm ke text-xs */}
-                      <h3 className="text-xs font-black text-white uppercase truncate">{c.nama}</h3>
+                      {/* Font nama diperkecil agar informasi lain terlihat */}
+                      <h3 className="text-[11px] font-black text-white uppercase truncate">{c.nama}</h3>
                     </div>
                     <div className="flex items-center space-x-2 pl-6">
                        <p className="text-[7px] font-black text-cyan-400 uppercase tracking-widest">{c.jenis_layanan}</p>
@@ -177,6 +183,23 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
                    </div>
                 </div>
 
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="flex items-center space-x-3 p-3 bg-white/[0.02] rounded-2xl border border-white/5">
+                      <Info size={12} className="text-indigo-400" />
+                      <div>
+                        <p className="text-[6px] font-black text-slate-500 uppercase">KDDK</p>
+                        <p className="text-[9px] font-black text-white">{c.kddk || '-'}</p>
+                      </div>
+                  </div>
+                  <div className="flex items-center space-x-3 p-3 bg-white/[0.02] rounded-2xl border border-white/5">
+                      <UserCheck size={12} className="text-indigo-400" />
+                      <div>
+                        <p className="text-[6px] font-black text-slate-500 uppercase">PETUGAS</p>
+                        <p className="text-[9px] font-black text-white">{c.petugas || '-'}</p>
+                      </div>
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-2 mb-6">
                   <TechnicalBox label="T/D" value={`${c.tarif}/${c.daya}`} />
                   <TechnicalBox label="G/T" value={`${c.gardu}/${c.no_tiang}`} />
@@ -188,7 +211,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
                   className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black text-[9px] tracking-[0.2em] flex items-center justify-center space-x-2 active:scale-95 transition-all uppercase"
                 >
                   <Compass size={16} className="animate-spin-slow" />
-                  <span>BUKA NAVIGASI {hasCoords ? 'KOORDINAT' : 'ALAMAT'}</span>
+                  <span>NAVIGASI {hasCoords ? 'KOORDINAT' : 'ALAMAT'}</span>
                 </button>
               </div>
             </div>
