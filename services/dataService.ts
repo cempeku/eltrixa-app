@@ -59,40 +59,42 @@ export const api = {
 
   searchCustomers: async (idpel: string): Promise<Customer[]> => {
     if (isConfigured() && supabase) {
-      // 1. Cari target utama
-      const { data: target } = await supabase.from('customers').select('*').eq('idpel', idpel).single();
+      // 1. Cari target utama secara eksak
+      const { data: target, error: targetErr } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('idpel', idpel.trim())
+        .single();
       
-      if (!target) {
-        // Jika tidak ketemu idpel pas, cari partial matches
+      if (targetErr || !target) {
+        // Jika tidak ketemu idpel pas, cari yang mirip (parsial)
         const { data: partials } = await supabase.from('customers').select('*').ilike('idpel', `%${idpel}%`).limit(10);
         return partials || [];
       }
 
-      // 2. Ambil tetangga (5 sebelum, 4 sesudah) pada Petugas & Hari Baca yang sama
-      // Menggunakan Promise.all agar lebih cepat
-      const [beforeRes, afterRes] = await Promise.all([
-        supabase.from('customers')
-          .select('*')
-          .eq('petugas', target.petugas)
-          .eq('hari_baca', target.hari_baca)
-          .lt('row_index', target.row_index)
-          .order('row_index', { ascending: false })
-          .limit(5),
-        supabase.from('customers')
-          .select('*')
-          .eq('petugas', target.petugas)
-          .eq('hari_baca', target.hari_baca)
-          .gt('row_index', target.row_index)
-          .order('row_index', { ascending: true })
-          .limit(4)
-      ]);
+      // 2. Ambil 5 SEBELUM (Petugas & Hari Baca sama, row_index lebih kecil)
+      const { data: before } = await supabase.from('customers')
+        .select('*')
+        .eq('petugas', target.petugas)
+        .eq('hari_baca', target.hari_baca)
+        .lt('row_index', target.row_index)
+        .order('row_index', { ascending: false })
+        .limit(5);
 
-      const before = beforeRes.data || [];
-      const after = afterRes.data || [];
+      // 3. Ambil 4 SESUDAH (Petugas & Hari Baca sama, row_index lebih besar)
+      const { data: after } = await supabase.from('customers')
+        .select('*')
+        .eq('petugas', target.petugas)
+        .eq('hari_baca', target.hari_baca)
+        .gt('row_index', target.row_index)
+        .order('row_index', { ascending: true })
+        .limit(4);
 
-      // Gabungkan dan urutkan ulang secara menaik
-      const combined = [...before, target, ...after];
-      return combined.sort((a, b) => a.row_index - b.row_index);
+      // Gabungkan hasil: Before (diurutkan naik) + Target + After
+      const sortedBefore = before ? [...before].sort((a, b) => a.row_index - b.row_index) : [];
+      const finalResults = [...sortedBefore, target, ...(after || [])];
+      
+      return finalResults;
     }
     return [];
   },
@@ -115,13 +117,14 @@ export const api = {
         .eq('petugas', usernameLogin)
         .eq('hari_baca', hari);
         
+      // Filter layanan eksak (PASKABAYAR untuk A-G, PRABAYAR untuk lainnya seperti L-R)
       if (isPasca) {
         query = query.eq('jenis_layanan', 'PASKABAYAR');
       } else {
         query = query.eq('jenis_layanan', 'PRABAYAR');
       }
 
-      // Pastikan urutan naik berdasarkan row_index (Urutan Buku)
+      // Selalu urutkan berdasarkan row_index agar Prabayar L M N P Q R tetap rapi sesuai Excel
       const { data, error } = await query.order('row_index', { ascending: true });
       if (error) console.error("Search criteria error:", error);
       return data || [];
@@ -201,8 +204,8 @@ export const api = {
       kddk: String(r.KDDK || r.kddk || '').trim(),
       hari_baca: String(r.HARI_BACA || r.hari_baca || '').trim(),
       petugas: String(r.PETUGAS || r.NAMA_PETUGAS || r.nama_petugas || '').trim(),
-      nama: String(r['NAMA PELANGGAN'] || r.NAMA_PELANGGAN || r.nama || '').trim(),
-      alamat: String(r.ALAMAT || r.alamat || '').trim(),
+      nama: String(r['NAMA PELANGGAN'] || r.nama || '').trim(),
+      alamat: String(r.ALAMAT || r.alamat || '').trim(), // Spasi tengah aman, hanya ujung yang di-trim
       tarif: String(r.TARIF || r.tarif || '').trim(),
       daya: Number(String(r.DAYA || r.daya || 0).replace(/\D/g, '')),
       gardu: String(r.GARDU || r.gardu || '').trim(),
@@ -211,12 +214,10 @@ export const api = {
       status: String(r.STATUS || r.status || 'AKTIF').trim().toUpperCase(),
       koordinat_x: String(r.KOORDINAT_X || r.koordinat_x || '').trim(),
       koordinat_y: String(r.KOORDINAT_Y || r.koordinat_y || '').trim(),
-      row_index: i // Menyimpan urutan asli file Excel
+      row_index: i // Menyimpan urutan fisik file Excel
     }));
     if (isConfigured() && supabase) {
-      // Hapus data lama dulu
       await supabase.from('customers').delete().neq('idpel', '0');
-      // Upload baru secara chunked
       await uploadInChunks('customers', batch, onProgress);
     }
   },
