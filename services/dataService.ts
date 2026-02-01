@@ -59,16 +59,16 @@ export const api = {
 
   searchCustomers: async (idpel: string): Promise<Customer[]> => {
     if (isConfigured() && supabase) {
-      // 1. Cari target utama
+      // 1. Cari target utama secara eksak
       const { data: target } = await supabase.from('customers').select('*').eq('idpel', idpel).single();
       
       if (!target) {
-        // Jika tidak ketemu idpel pas, cari partial
+        // Jika tidak ketemu idpel pas, cari yang mirip (parsial)
         const { data: partials } = await supabase.from('customers').select('*').ilike('idpel', `%${idpel}%`).limit(10);
         return partials || [];
       }
 
-      // 2. Ambil 5 SEBELUM (Urutan mengecil dari target.row_index)
+      // 2. Ambil 5 SEBELUM (Petugas & Hari Baca sama, row_index lebih kecil)
       const { data: before } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -77,7 +77,7 @@ export const api = {
         .order('row_index', { ascending: false })
         .limit(5);
 
-      // 3. Ambil 4 SESUDAH (Urutan membesar dari target.row_index)
+      // 3. Ambil 4 SESUDAH (Petugas & Hari Baca sama, row_index lebih besar)
       const { data: after } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -86,9 +86,11 @@ export const api = {
         .order('row_index', { ascending: true })
         .limit(4);
 
-      // Gabungkan: [5 data sebelum (diurutkan naik)], [target], [4 data sesudah]
+      // Pastikan urutan final: Before -> Target -> After (semua naik berdasarkan row_index)
       const sortedBefore = before ? [...before].sort((a, b) => a.row_index - b.row_index) : [];
-      return [...sortedBefore, target, ...(after || [])];
+      const finalResults = [...sortedBefore, target, ...(after || [])];
+      
+      return finalResults;
     }
     return [];
   },
@@ -106,20 +108,17 @@ export const api = {
       const pascaDays = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
       const isPasca = pascaDays.includes(hari);
       
-      // Ambil bagian nama petugas saja (misal 51804.AGUNG -> AGUNG)
-      const officerNameOnly = usernameLogin.includes('.') ? usernameLogin.split('.')[1] : usernameLogin;
-      
+      // Username login (misal: 51804.AGUNG) dicocokkan eksak dengan kolom petugas di DB
       let query = supabase.from('customers')
         .select('*')
-        .eq('hari_baca', hari)
-        // Gunakan ilike agar fleksibel (mencari nama yang mengandung AGUNG)
-        .ilike('petugas', `%${officerNameOnly}%`);
+        .eq('petugas', usernameLogin)
+        .eq('hari_baca', hari);
         
-      // Filter layanan secara fleksibel (menggunakan awalan PAS atau PRA)
+      // Filter layanan eksak sesuai permintaan (PASKABAYAR untuk A-G)
       if (isPasca) {
-        query = query.ilike('jenis_layanan', 'PAS%');
+        query = query.eq('jenis_layanan', 'PASKABAYAR');
       } else {
-        query = query.ilike('jenis_layanan', 'PRA%');
+        query = query.eq('jenis_layanan', 'PRABAYAR');
       }
 
       const { data, error } = await query.order('row_index', { ascending: true });
@@ -131,10 +130,8 @@ export const api = {
 
   getArrears: async (username: string): Promise<Arrear[]> => {
     if (isConfigured() && supabase) {
-      // Normalisasi nama petugas untuk pencarian tunggakan juga
-      const officerNameOnly = username.includes('.') ? username.split('.')[1] : username;
       let q = supabase.from('arrears').select('*');
-      if (username !== 'ADMIN') q = q.ilike('petugas', `%${officerNameOnly}%`);
+      if (username !== 'ADMIN') q = q.eq('petugas', username);
       const { data } = await q;
       return data || [];
     }
@@ -183,7 +180,6 @@ export const api = {
       return { 
         officerCount: usersData?.length || 0, 
         activeCount: usersData?.filter(u => u.device_id).length || 0, 
-        // Mapping device_id from database to deviceId for the User interface
         users: (usersData || []).map((u: any) => ({
           username: u.username,
           name: u.name,
