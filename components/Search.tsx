@@ -53,7 +53,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     try {
       let data: Customer[] = [];
       if (/^\d+$/.test(cleanKeyword)) {
-        // Pencarian IDPEL -> Mengambil 10 baris (5 sebelum, 4 sesudah)
+        // Pencarian IDPEL -> Mengambil sekuensial (5 sebelum, target, 4 sesudah)
         data = await api.searchCustomers(cleanKeyword);
       } else {
         data = await api.searchByName(cleanKeyword.toUpperCase());
@@ -72,13 +72,18 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     setLoading(true);
     setSearched(true);
     setCurrentPage(1);
+    setKeyword(''); // Reset search text when filtering by day
+    
     try {
-      // Filter hanya untuk petugas yang sedang login
+      // Filter presisi hanya untuk petugas yang sedang login & hari baca terkait
       const data = await api.searchByCriteria(user.username, selectedDay);
       setResults(data);
       playSound(data.length > 0 ? 'success' : 'error');
-    } catch (err) { playSound('error'); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      playSound('error'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const totalPages = Math.ceil(results.length / ITEMS_PER_PAGE);
@@ -96,7 +101,6 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
              <input 
                type="text" 
                inputMode="numeric"
-               pattern="[0-9]*"
                value={keyword}
                onChange={(e) => setKeyword(e.target.value)}
                placeholder="IDPEL, Nama, No Meter..." 
@@ -131,14 +135,14 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
       <div className="space-y-6">
         {searched && results.length === 0 && (
           <div className="py-24 text-center">
-             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Data Tidak Ditemukan</p>
+             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 italic">Data Tidak Ditemukan</p>
+             <p className="text-[8px] text-slate-600 font-bold uppercase mt-2">Pastikan Petugas & Hari Baca Sesuai di Database Master</p>
           </div>
         )}
 
         {displayed.map((c, i) => {
           const isExactMatch = c.idpel === keyword;
-          // Memperbaiki koordinat terbalik: Database (x=Lng, y=Lat) -> Maps (Lat,Lng)
-          // Maka query: y,x
+          // Database (x=Lng, y=Lat) -> Google Maps (Lat,Lng) => y,x
           const hasCoords = c.koordinat_x && c.koordinat_y;
           const mapUrl = hasCoords 
             ? `https://www.google.com/maps/search/?api=1&query=${c.koordinat_y},${c.koordinat_x}`
@@ -151,7 +155,6 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2.5 mb-1">
                       <Zap size={14} className="text-yellow-400 shrink-0" />
-                      {/* Font nama diperkecil agar informasi lain terlihat */}
                       <h3 className="text-[11px] font-black text-white uppercase truncate">{c.nama}</h3>
                     </div>
                     <div className="flex items-center space-x-2 pl-6">
