@@ -63,12 +63,12 @@ export const api = {
       const { data: target } = await supabase.from('customers').select('*').eq('idpel', idpel).single();
       
       if (!target) {
-        // Jika tidak ketemu pas, cari yang mirip (IDPEL parsial)
+        // Jika tidak ketemu idpel pas, cari partial
         const { data: partials } = await supabase.from('customers').select('*').ilike('idpel', `%${idpel}%`).limit(10);
         return partials || [];
       }
 
-      // 2. Ambil 5 SEBELUM (Petugas & Hari Baca sama, Urutan berdasarkan row_index)
+      // 2. Ambil 5 SEBELUM (Urutan mengecil dari target.row_index)
       const { data: before } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -77,7 +77,7 @@ export const api = {
         .order('row_index', { ascending: false })
         .limit(5);
 
-      // 3. Ambil 4 SESUDAH
+      // 3. Ambil 4 SESUDAH (Urutan membesar dari target.row_index)
       const { data: after } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -86,8 +86,9 @@ export const api = {
         .order('row_index', { ascending: true })
         .limit(4);
 
-      // Urutan hasil: Before (di-reverse agar naik) + Target + After
-      return [...(before?.reverse() || []), target, ...(after || [])];
+      // Gabungkan: [5 data sebelum (diurutkan naik)], [target], [4 data sesudah]
+      const sortedBefore = before ? [...before].sort((a, b) => a.row_index - b.row_index) : [];
+      return [...sortedBefore, target, ...(after || [])];
     }
     return [];
   },
@@ -100,22 +101,29 @@ export const api = {
     return [];
   },
 
-  searchByCriteria: async (petugas: string, hari: string): Promise<Customer[]> => {
+  searchByCriteria: async (usernameLogin: string, hari: string): Promise<Customer[]> => {
     if (isConfigured() && supabase) {
-      // Logic hari baca per layanan
       const pascaDays = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
       const isPasca = pascaDays.includes(hari);
       
+      // Ambil bagian nama petugas saja (misal 51804.AGUNG -> AGUNG)
+      const officerNameOnly = usernameLogin.includes('.') ? usernameLogin.split('.')[1] : usernameLogin;
+      
       let query = supabase.from('customers')
         .select('*')
-        .eq('petugas', petugas)
-        .eq('hari_baca', hari);
+        .eq('hari_baca', hari)
+        // Gunakan ilike agar fleksibel (mencari nama yang mengandung AGUNG)
+        .ilike('petugas', `%${officerNameOnly}%`);
         
-      // Opsional: Jika ingin ketat ke jenis layanan
-      if (isPasca) query = query.eq('jenis_layanan', 'PASCABAYAR');
-      else query = query.eq('jenis_layanan', 'PRABAYAR');
+      // Filter layanan secara fleksibel (menggunakan awalan PAS atau PRA)
+      if (isPasca) {
+        query = query.ilike('jenis_layanan', 'PAS%');
+      } else {
+        query = query.ilike('jenis_layanan', 'PRA%');
+      }
 
-      const { data } = await query.order('row_index', { ascending: true });
+      const { data, error } = await query.order('row_index', { ascending: true });
+      if (error) console.error("Search criteria error:", error);
       return data || [];
     }
     return [];
@@ -123,8 +131,10 @@ export const api = {
 
   getArrears: async (username: string): Promise<Arrear[]> => {
     if (isConfigured() && supabase) {
+      // Normalisasi nama petugas untuk pencarian tunggakan juga
+      const officerNameOnly = username.includes('.') ? username.split('.')[1] : username;
       let q = supabase.from('arrears').select('*');
-      if (username !== 'ADMIN') q = q.eq('petugas', username);
+      if (username !== 'ADMIN') q = q.ilike('petugas', `%${officerNameOnly}%`);
       const { data } = await q;
       return data || [];
     }
@@ -173,7 +183,13 @@ export const api = {
       return { 
         officerCount: usersData?.length || 0, 
         activeCount: usersData?.filter(u => u.device_id).length || 0, 
-        users: usersData || [], 
+        // Mapping device_id from database to deviceId for the User interface
+        users: (usersData || []).map((u: any) => ({
+          username: u.username,
+          name: u.name,
+          role: u.role as Role,
+          deviceId: u.device_id
+        })), 
         recentLogs: logs || [], 
         rowCounts: { customers: cCount || 0, arrears: aCount || 0, whitelist: wCount || 0, entries: eCount || 0 }
       };
@@ -194,7 +210,7 @@ export const api = {
       daya: Number(String(r.DAYA || r.daya || 0).replace(/\D/g, '')),
       gardu: String(r.GARDU || r.gardu || ''),
       no_tiang: String(r.NO_TIANG || r.no_tiang || ''),
-      jenis_layanan: String(r.JENIS_LAYANAN || r.jenis_layanan || ''),
+      jenis_layanan: String(r.JENIS_LAYANAN || r.jenis_layanan || '').toUpperCase(),
       status: String(r.STATUS || r.status || 'AKTIF'),
       koordinat_x: String(r.KOORDINAT_X || r.koordinat_x || ''),
       koordinat_y: String(r.KOORDINAT_Y || r.koordinat_y || ''),
