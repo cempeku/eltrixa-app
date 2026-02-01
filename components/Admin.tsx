@@ -180,7 +180,8 @@ export const Admin = () => {
                                 <span className="font-extrabold text-sm text-white uppercase">{u.username}</span>
                                 <span className="text-[8px] text-indigo-400 uppercase font-black">{u.name}</span>
                             </div>
-                            {u.device_id && (
+                            {/* Use camelCase deviceId from User interface instead of snake_case device_id from database */}
+                            {u.deviceId && (
                                 <button onClick={() => handleResetDevice(u.username)} className="px-4 py-2 bg-red-500/10 text-red-500 rounded-xl text-[8px] font-black uppercase hover:bg-red-500 hover:text-white transition-all shadow-lg active:scale-95">Riset HP</button>
                             )}
                         </div>
