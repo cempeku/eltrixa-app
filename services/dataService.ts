@@ -1,9 +1,7 @@
 import { User, Customer, Arrear, EntryLog, Role } from '../types';
 import { supabase, isConfigured } from './supabaseClient';
-import { localDB } from './localDb';
 import * as XLSX from 'xlsx';
 
-// Ukuran chunk ditingkatkan untuk kecepatan data besar (175k)
 const CHUNK_SIZE = 2000;
 
 export const getDeviceId = () => {
@@ -65,11 +63,12 @@ export const api = {
       const { data: target } = await supabase.from('customers').select('*').eq('idpel', idpel).single();
       
       if (!target) {
+        // Jika tidak ketemu pas, cari yang mirip (IDPEL parsial)
         const { data: partials } = await supabase.from('customers').select('*').ilike('idpel', `%${idpel}%`).limit(10);
         return partials || [];
       }
 
-      // 2. Ambil 5 SEBELUM (berdasarkan row_index di petugas & hari_baca yang sama)
+      // 2. Ambil 5 SEBELUM (Petugas & Hari Baca sama, Urutan berdasarkan row_index)
       const { data: before } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -87,7 +86,7 @@ export const api = {
         .order('row_index', { ascending: true })
         .limit(4);
 
-      // Urutan: Before (dibalik agar urut naik) -> Target -> After
+      // Urutan hasil: Before (di-reverse agar naik) + Target + After
       return [...(before?.reverse() || []), target, ...(after || [])];
     }
     return [];
@@ -103,15 +102,20 @@ export const api = {
 
   searchByCriteria: async (petugas: string, hari: string): Promise<Customer[]> => {
     if (isConfigured() && supabase) {
+      // Logic hari baca per layanan
       const pascaDays = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      const layanan = pascaDays.includes(hari) ? 'PASCABAYAR' : 'PRABAYAR';
+      const isPasca = pascaDays.includes(hari);
       
-      const { data } = await supabase.from('customers')
+      let query = supabase.from('customers')
         .select('*')
         .eq('petugas', petugas)
-        .eq('hari_baca', hari)
-        .eq('jenis_layanan', layanan)
-        .order('row_index', { ascending: true });
+        .eq('hari_baca', hari);
+        
+      // Opsional: Jika ingin ketat ke jenis layanan
+      if (isPasca) query = query.eq('jenis_layanan', 'PASCABAYAR');
+      else query = query.eq('jenis_layanan', 'PRABAYAR');
+
+      const { data } = await query.order('row_index', { ascending: true });
       return data || [];
     }
     return [];
