@@ -1,10 +1,23 @@
-
 import React, { useState } from 'react';
 import { Customer, User } from '../types';
 import { api } from '../services/dataService';
 import { playSound } from '../services/soundService';
 import { READING_DAYS } from '../constants';
-import { Search as SearchIcon, MapPin, ChevronLeft, ChevronRight, Compass, Filter, Target, UserCircle2, Zap, Landmark, Info, Tag, Activity } from 'lucide-react';
+import { 
+  Search as SearchIcon, 
+  MapPin, 
+  ChevronLeft, 
+  ChevronRight, 
+  Compass, 
+  Filter, 
+  Zap, 
+  Info, 
+  Activity,
+  UserSearch,
+  Hash,
+  Copy,
+  CheckCheck
+} from 'lucide-react';
 
 interface SearchProps {
   user: User;
@@ -17,22 +30,39 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
   const [results, setResults] = useState<Customer[]>([]);
   const [searched, setSearched] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const ITEMS_PER_PAGE = 10;
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedId(text);
+    playSound('success');
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
   const handleSmartSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!keyword.trim()) return;
+    const cleanKeyword = keyword.trim();
+    if (!cleanKeyword) return;
+    
     setLoading(true);
     setSearched(true);
     setCurrentPage(1);
+    
     try {
-      const data = /^\d+$/.test(keyword.trim()) 
-        ? await api.searchCustomers(keyword.trim()) 
-        : await api.searchByName(keyword.trim().toUpperCase());
+      let data: Customer[] = [];
+      if (/^\d+$/.test(cleanKeyword)) {
+        data = await api.searchCustomers(cleanKeyword);
+      } else {
+        data = await api.searchByName(cleanKeyword.toUpperCase());
+      }
       setResults(data);
       playSound(data.length > 0 ? 'success' : 'error');
-    } catch (err) { playSound('error'); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      playSound('error'); 
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const handleFilterSearch = async (selectedDay: string) => {
@@ -41,9 +71,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     setSearched(true);
     setCurrentPage(1);
     try {
-      const pascaDays = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-      const service = pascaDays.includes(selectedDay) ? 'PASCABAYAR' : 'PRABAYAR';
-      const data = await api.searchByCriteria(user.username, selectedDay, service);
+      const data = await api.searchByCriteria(user.username, selectedDay);
       setResults(data);
       playSound(data.length > 0 ? 'success' : 'error');
     } catch (err) { playSound('error'); }
@@ -54,20 +82,22 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
   const displayed = results.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE);
 
   return (
-    <div className="px-8 space-y-8 animate-fade-in">
-      
+    <div className="px-6 md:px-8 space-y-6 animate-fade-in pb-32">
       <div className="relative pt-4">
         <form onSubmit={handleSmartSearch} className="relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-[2.5rem] blur opacity-20 group-focus-within:opacity-40 transition duration-1000"></div>
-          <div className="relative premium-glass p-1.5 rounded-[2.5rem] flex items-center">
+          <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-[2rem] blur opacity-25 group-focus-within:opacity-50 transition duration-1000"></div>
+          <div className="relative premium-glass p-1.5 rounded-[2rem] flex items-center bg-slate-900/80">
+             <div className="pl-5 text-slate-500">
+                {/^\d+$/.test(keyword) ? <Hash size={18} /> : <UserSearch size={18} />}
+             </div>
              <input 
                type="text" 
                value={keyword}
                onChange={(e) => setKeyword(e.target.value)}
-               placeholder="Ketik IDPEL atau Nama..." 
-               className="flex-1 bg-transparent border-none outline-none px-6 py-4 font-bold text-white placeholder:text-slate-600 text-sm" 
+               placeholder="IDPEL, Nama, No Meter..." 
+               className="flex-1 bg-transparent border-none outline-none px-4 py-4 font-bold text-white placeholder:text-slate-600 text-sm" 
              />
-             <button type="submit" className="bg-gradient-to-r from-cyan-500 to-blue-600 w-12 h-12 rounded-full flex items-center justify-center text-white shadow-xl active:scale-90 transition transform">
+             <button type="submit" className="bg-gradient-to-r from-cyan-500 to-blue-600 w-12 h-12 rounded-[1.5rem] flex items-center justify-center text-white shadow-xl active:scale-90 transition transform">
                <SearchIcon size={20} />
              </button>
           </div>
@@ -80,83 +110,85 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
            <select 
              value={readDay} 
              onChange={(e) => { setReadDay(e.target.value); if(e.target.value) handleFilterSearch(e.target.value); }}
-             className="bg-transparent text-[10px] font-black uppercase text-slate-300 outline-none"
+             className="bg-transparent text-[10px] font-black uppercase text-slate-300 outline-none cursor-pointer"
            >
-             <option value="" className="bg-slate-900">Filter Hari</option>
+             <option value="" className="bg-slate-900">PILIH HARI BACA</option>
              {READING_DAYS.map(d => <option key={d} value={d} className="bg-slate-900">{d}</option>)}
            </select>
         </div>
+        {searched && (
+          <button onClick={() => { setResults([]); setSearched(false); setKeyword(''); setReadDay(''); }} className="px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase rounded-2xl shrink-0">
+            Reset
+          </button>
+        )}
       </div>
 
-      <div className="space-y-8 pb-32">
+      <div className="space-y-6">
         {searched && results.length === 0 && (
-          <div className="py-20 text-center opacity-40">
-            <SearchIcon size={64} className="mx-auto text-slate-600 mb-4" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Data Tidak Ditemukan</p>
+          <div className="py-24 text-center">
+             <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500">Data Tidak Ditemukan</p>
           </div>
         )}
 
         {displayed.map((c, i) => {
-          const isTarget = c.idpel === keyword;
+          const isExactMatch = c.idpel === keyword;
+          // Gunakan koordinat jika ada, jika tidak gunakan Nama+Alamat
+          const hasCoords = c.koordinat_x && c.koordinat_y;
+          const mapUrl = hasCoords 
+            ? `https://www.google.com/maps/search/?api=1&query=${c.koordinat_x},${c.koordinat_y}`
+            : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.nama + ' ' + c.alamat)}`;
           
           return (
-            <div key={i} className={`relative premium-glass rounded-[2.5rem] overflow-hidden border-2 transition-all duration-700 ${isTarget ? 'border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.3)]' : 'border-white/5'}`}>
-              
-              {isTarget && (
-                <div className="absolute top-0 right-8 bg-gradient-to-b from-yellow-500 to-yellow-700 px-4 py-1.5 rounded-b-xl shadow-xl flex items-center space-x-2 z-20 animate-bounce">
-                  <Target size={12} className="text-white fill-white/20" />
-                  <span className="text-[8px] font-black text-white uppercase tracking-widest">TARGET OPERASI</span>
-                </div>
-              )}
-
+            <div key={i} className={`relative premium-glass rounded-[2.5rem] overflow-hidden border-2 transition-all duration-500 ${isExactMatch ? 'border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.2)]' : 'border-white/5'} animate-fade-in`}>
               <div className="p-6">
-                <div className="mb-6 flex justify-between items-start">
-                  <div className="max-w-[75%]">
-                    <div className="flex items-center space-x-2.5 mb-1.5">
-                      <Zap size={16} className="text-yellow-400 fill-yellow-400/20" />
-                      <h3 className="text-lg font-black text-white tracking-tighter uppercase leading-none truncate">{c.nama}</h3>
+                <div className="mb-4 flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2.5 mb-1">
+                      <Zap size={14} className="text-yellow-400 shrink-0" />
+                      {/* Font nama diperkecil dari text-sm ke text-xs */}
+                      <h3 className="text-xs font-black text-white uppercase truncate">{c.nama}</h3>
                     </div>
-                    <div className="flex items-center space-x-2 opacity-60">
-                       <Tag size={10} className="text-cyan-400" />
-                       <p className="text-[9px] font-black text-cyan-400 tracking-[0.1em] uppercase">{c.jenis_layanan}</p>
+                    <div className="flex items-center space-x-2 pl-6">
+                       <p className="text-[7px] font-black text-cyan-400 uppercase tracking-widest">{c.jenis_layanan}</p>
                     </div>
                   </div>
-                  <div className={`px-3 py-1 rounded-xl text-[8px] font-black uppercase tracking-widest ${c.status === 'AKTIF' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-red-500/20 text-red-400 border-red-500/30'} border`}>
+                  <div className={`shrink-0 px-3 py-1 rounded-lg text-[7px] font-black uppercase ${c.status === 'AKTIF' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'} border border-white/5`}>
                     {c.status}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  <InfoItem icon={Info} label="IDPEL" value={c.idpel} highlight={isTarget} />
-                  <InfoItem icon={Activity} label="NO METER" value={c.no_meter} />
-                  <InfoItem icon={Landmark} label="KDDK" value={c.kddk} />
-                  <InfoItem icon={UserCircle2} label="PETUGAS" value={c.petugas} />
+                <div className="grid grid-cols-2 gap-2 mb-4">
+                  <div className="relative group">
+                    <InfoItem icon={Hash} label="IDPEL" value={c.idpel} highlight={isExactMatch} />
+                    <button onClick={() => handleCopy(c.idpel)} className="absolute top-2 right-2 p-1.5 bg-white/5 rounded-lg text-slate-500 hover:text-white transition-all">
+                        {copiedId === c.idpel ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                  <InfoItem icon={Activity} label="NO METER" value={c.no_meter || '-'} />
                 </div>
 
-                <div className="bg-white/5 rounded-2xl p-4 mb-5 border border-white/10">
+                <div className="bg-slate-900/40 rounded-2xl p-4 mb-4 border border-white/5">
                    <div className="flex items-start space-x-3">
-                      <div className="p-1.5 bg-cyan-500/20 rounded-lg shrink-0">
-                        <MapPin className="text-cyan-400" size={14} />
-                      </div>
+                      <MapPin className="text-blue-400 shrink-0 mt-0.5" size={14} />
                       <div className="flex-1">
-                         <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-0.5">Alamat</p>
-                         <p className="text-[10px] font-bold text-slate-200 uppercase leading-relaxed text-balance">{c.alamat}</p>
+                         <p className="text-[7px] font-black text-slate-500 uppercase tracking-widest mb-1">Alamat</p>
+                         <p className="text-[9px] font-bold text-slate-200 uppercase leading-relaxed tracking-wide">{c.alamat}</p>
                       </div>
                    </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-2 mb-6">
-                  <TechnicalBox label="TARIF/DAYA" value={`${c.tarif}/${c.daya}VA`} />
-                  <TechnicalBox label="GARDU/TIANG" value={`${c.gardu}/${c.no_tiang}`} />
-                  <TechnicalBox label="HARI BACA" value={c.hari_baca} />
+                  <TechnicalBox label="T/D" value={`${c.tarif}/${c.daya}`} />
+                  <TechnicalBox label="G/T" value={`${c.gardu}/${c.no_tiang}`} />
+                  <TechnicalBox label="HARI" value={c.hari_baca} />
                 </div>
 
                 <button 
-                  onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.nama + ' ' + c.alamat)}`, '_blank')}
-                  className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-700 text-white rounded-2xl font-black text-[9px] tracking-[0.2em] flex items-center justify-center space-x-3 shadow-lg active:scale-95 transition-all uppercase"
+                  onClick={() => window.open(mapUrl, '_blank')}
+                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black text-[9px] tracking-[0.2em] flex items-center justify-center space-x-2 active:scale-95 transition-all uppercase"
                 >
                   <Compass size={16} className="animate-spin-slow" />
-                  <span>BUKA NAVIGASI PETA</span>
+                  <span>BUKA NAVIGASI {hasCoords ? 'KOORDINAT' : 'ALAMAT'}</span>
                 </button>
               </div>
             </div>
@@ -164,23 +196,14 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
         })}
 
         {results.length > ITEMS_PER_PAGE && (
-          <div className="flex justify-between items-center bg-slate-900/80 p-3 rounded-3xl border border-white/10 backdrop-blur-xl">
-            <button 
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))} 
-              disabled={currentPage === 1} 
-              className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-white disabled:opacity-10 active:bg-cyan-500 transition-colors"
-            >
+          <div className="flex justify-between items-center bg-slate-900/90 p-3 rounded-[2rem] border border-white/10 backdrop-blur-xl">
+            <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white disabled:opacity-10 transition-colors">
               <ChevronLeft size={20}/>
             </button>
             <div className="text-center">
-               <span className="block text-[8px] font-black text-slate-500 uppercase tracking-widest">Hal</span>
-               <span className="text-xs font-black text-white">{currentPage} <span className="text-slate-600">/</span> {totalPages}</span>
+               <span className="text-xs font-black text-white">{currentPage} / {totalPages}</span>
             </div>
-            <button 
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} 
-              disabled={currentPage === totalPages} 
-              className="w-12 h-12 bg-white/5 rounded-xl flex items-center justify-center text-white disabled:opacity-10 active:bg-cyan-500 transition-colors"
-            >
+            <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="w-12 h-12 bg-white/5 rounded-2xl flex items-center justify-center text-white disabled:opacity-10 transition-colors">
               <ChevronRight size={20}/>
             </button>
           </div>
@@ -191,17 +214,17 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
 };
 
 const InfoItem = ({ icon: Icon, label, value, highlight }: any) => (
-  <div className={`p-3 rounded-2xl border ${highlight ? 'bg-yellow-500/10 border-yellow-500/30' : 'bg-slate-900/50 border-white/5'} transition-all`}>
-    <div className="flex items-center space-x-2 mb-1 opacity-50">
+  <div className={`p-3 rounded-2xl border ${highlight ? 'bg-yellow-500/10 border-yellow-500/20' : 'bg-slate-900/60 border-white/5'}`}>
+    <div className="flex items-center space-x-1.5 mb-1 opacity-40">
       <Icon size={10} className={highlight ? 'text-yellow-400' : 'text-slate-400'} />
       <span className="text-[7px] font-black uppercase tracking-widest">{label}</span>
     </div>
-    <p className={`text-[10px] font-mono font-bold truncate ${highlight ? 'text-yellow-400' : 'text-slate-200'}`}>{value}</p>
+    <p className={`text-[10px] font-mono font-bold truncate ${highlight ? 'text-yellow-400' : 'text-slate-100'}`}>{value}</p>
   </div>
 );
 
 const TechnicalBox = ({ label, value }: any) => (
-  <div className="text-center p-2.5 bg-white/[0.03] rounded-xl border border-white/5">
+  <div className="text-center p-2.5 bg-white/[0.02] rounded-xl border border-white/5">
     <p className="text-[6px] font-black text-slate-600 uppercase tracking-widest mb-0.5">{label}</p>
     <p className="text-[9px] font-black text-white truncate">{value}</p>
   </div>
