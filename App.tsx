@@ -20,35 +20,37 @@ const ECGLine = () => (
 );
 
 const BackgroundLogo = () => (
-  <div className="absolute inset-0 flex items-center justify-center opacity-[0.06] pointer-events-none overflow-hidden select-none">
+  <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden select-none z-0">
     <svg 
-      width="450" 
-      height="450" 
+      width="500" 
+      height="500" 
       viewBox="0 0 200 200" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
-      className="animate-pulse-soft text-cyan-500/30"
+      className="animate-pulse-soft text-cyan-500/15"
     >
-      {/* Hexagon Frame - Very light stroke */}
+      {/* Outer Hexagon - Structural frame */}
       <path 
         d="M100 15 L173.6 57.5 L173.6 142.5 L100 185 L26.4 142.5 L26.4 57.5 Z" 
         stroke="currentColor" 
-        strokeWidth="1.2" 
+        strokeWidth="1.5" 
       />
-      {/* Abstract Energy Icon (Lightning-like but rhythmic/abstract) */}
+      {/* Abstract Energy Rhythm (Lightning-like but stylized as a pulse wave) */}
       <path 
-        d="M110 30 L85 100 H115 L90 170" 
+        d="M110 35 L85 95 H115 L90 165" 
         stroke="currentColor" 
-        strokeWidth="12"
+        strokeWidth="10"
         strokeLinecap="round"
         strokeLinejoin="round"
-        className="opacity-60"
+        className="opacity-40"
       />
-      {/* Modern Identity Marks */}
-      <g stroke="currentColor" strokeWidth="1" opacity="0.5">
-        <path d="M60 70 H85 M60 100 H80 M60 130 H85 M60 70 V130" strokeLinecap="round" />
-        <path d="M120 70 L145 130 M145 70 L120 130" strokeLinecap="round" />
+      {/* Intricate circuitry for technical feel */}
+      <g stroke="currentColor" strokeWidth="0.8" opacity="0.3">
+        <path d="M60 70 H85 M60 100 H80 M60 130 H85 M60 70 V130" />
+        <path d="M140 70 L115 130 M115 70 L140 130" />
       </g>
+      {/* Center Glow Core */}
+      <circle cx="100" cy="100" r="15" fill="currentColor" className="opacity-10 animate-pulse" />
     </svg>
   </div>
 );
@@ -105,15 +107,15 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-950">
-      {/* Background Layer - Strictly isolated with z-0 and pointer-events-none */}
+      {/* BACKGROUND LAYER: FIXED AND LOWEST Z-INDEX */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 hexagon-grid">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] bg-indigo-600/10 rounded-full blur-[140px] animate-heartbeat"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] bg-indigo-600/5 rounded-full blur-[140px] animate-heartbeat"></div>
         <BackgroundLogo />
-        <div className="absolute top-[15%] w-full opacity-20 ecg-line"><ECGLine /></div>
-        <div className="absolute bottom-[15%] w-full opacity-15 ecg-line rotate-180"><ECGLine /></div>
+        <div className="absolute top-[15%] w-full opacity-10 ecg-line"><ECGLine /></div>
+        <div className="absolute bottom-[15%] w-full opacity-10 ecg-line rotate-180"><ECGLine /></div>
       </div>
 
-      {/* Content Layer - Foreground logic stays here at z-10 */}
+      {/* CONTENT LAYER: RELATIVE AND HIGHER Z-INDEX */}
       <div className="relative z-10">
         <Layout 
           user={user} 
@@ -152,4 +154,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
