@@ -17,7 +17,8 @@ import {
   Hash,
   Copy,
   CheckCheck,
-  UserCheck
+  UserCheck,
+  Target
 } from 'lucide-react';
 
 interface SearchProps {
@@ -27,6 +28,7 @@ interface SearchProps {
 
 export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
   const [keyword, setKeyword] = useState('');
+  const [lastSearchedId, setLastSearchedId] = useState('');
   const [readDay, setReadDay] = useState('');
   const [results, setResults] = useState<Customer[]>([]);
   const [searched, setSearched] = useState(false);
@@ -49,11 +51,11 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     setLoading(true);
     setSearched(true);
     setCurrentPage(1);
+    setLastSearchedId(cleanKeyword);
     
     try {
       let data: Customer[] = [];
       if (/^\d+$/.test(cleanKeyword)) {
-        // Pencarian IDPEL -> Mengambil sekuensial (5 sebelum, target, 4 sesudah)
         data = await api.searchCustomers(cleanKeyword);
       } else {
         data = await api.searchByName(cleanKeyword.toUpperCase());
@@ -72,10 +74,9 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     setLoading(true);
     setSearched(true);
     setCurrentPage(1);
-    setKeyword(''); // Reset search text when filtering by day
+    setLastSearchedId(''); // Reset target highlight jika mencari berdasarkan hari baca
     
     try {
-      // Filter presisi hanya untuk petugas yang sedang login & hari baca terkait
       const data = await api.searchByCriteria(user.username, selectedDay);
       setResults(data);
       playSound(data.length > 0 ? 'success' : 'error');
@@ -126,7 +127,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
            </select>
         </div>
         {searched && (
-          <button onClick={() => { setResults([]); setSearched(false); setKeyword(''); setReadDay(''); }} className="px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase rounded-2xl shrink-0">
+          <button onClick={() => { setResults([]); setSearched(false); setKeyword(''); setLastSearchedId(''); setReadDay(''); }} className="px-4 py-2.5 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-black uppercase rounded-2xl shrink-0">
             Reset
           </button>
         )}
@@ -136,26 +137,33 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
         {searched && results.length === 0 && (
           <div className="py-24 text-center">
              <p className="text-[10px] font-black uppercase tracking-[0.4em] text-slate-500 italic">Data Tidak Ditemukan</p>
-             <p className="text-[8px] text-slate-600 font-bold uppercase mt-2">Pastikan Petugas & Hari Baca Sesuai di Database Master</p>
+             <p className="text-[8px] text-slate-600 font-bold uppercase mt-2 italic">Pastikan Petugas & Hari Baca Sesuai di Database Master</p>
           </div>
         )}
 
         {displayed.map((c, i) => {
-          const isExactMatch = c.idpel === keyword;
-          // Database (x=Lng, y=Lat) -> Google Maps (Lat,Lng) => y,x
+          // Penentu apakah item ini adalah target utama pencarian
+          const isTarget = c.idpel === lastSearchedId;
           const hasCoords = c.koordinat_x && c.koordinat_y;
           const mapUrl = hasCoords 
             ? `https://www.google.com/maps/search/?api=1&query=${c.koordinat_y},${c.koordinat_x}`
             : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.nama + ' ' + c.alamat)}`;
           
           return (
-            <div key={i} className={`relative premium-glass rounded-[2.5rem] overflow-hidden border-2 transition-all duration-500 ${isExactMatch ? 'border-yellow-500/50 shadow-[0_0_50px_rgba(234,179,8,0.2)]' : 'border-white/5'} animate-fade-in`}>
-              <div className="p-6">
+            <div key={i} className={`relative premium-glass rounded-[2.5rem] overflow-hidden border-2 transition-all duration-500 ${isTarget ? 'border-yellow-500 shadow-[0_0_40px_rgba(234,179,8,0.2)] scale-[1.02] z-50' : 'border-white/5'} animate-fade-in`}>
+              {isTarget && (
+                <div className="absolute top-0 inset-x-0 h-8 bg-gradient-to-r from-yellow-500 via-orange-500 to-yellow-500 flex items-center justify-center space-x-2">
+                   <Target size={14} className="text-white animate-pulse" />
+                   <span className="text-[8px] font-black text-white uppercase tracking-[0.3em]">IDPEL TARGET DITEMUKAN</span>
+                </div>
+              )}
+
+              <div className={`p-6 ${isTarget ? 'pt-12' : ''}`}>
                 <div className="mb-4 flex justify-between items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center space-x-2.5 mb-1">
-                      <Zap size={14} className="text-yellow-400 shrink-0" />
-                      <h3 className="text-[11px] font-black text-white uppercase truncate">{c.nama}</h3>
+                      <Zap size={14} className={isTarget ? 'text-yellow-400' : 'text-blue-400'} />
+                      <h3 className={`text-[11px] font-black uppercase truncate ${isTarget ? 'text-yellow-500' : 'text-white'}`}>{c.nama}</h3>
                     </div>
                     <div className="flex items-center space-x-2 pl-6">
                        <p className="text-[7px] font-black text-cyan-400 uppercase tracking-widest">{c.jenis_layanan}</p>
@@ -168,7 +176,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
 
                 <div className="grid grid-cols-2 gap-2 mb-4">
                   <div className="relative group">
-                    <InfoItem icon={Hash} label="IDPEL" value={c.idpel} highlight={isExactMatch} />
+                    <InfoItem icon={Hash} label="IDPEL" value={c.idpel} highlight={isTarget} />
                     <button onClick={() => handleCopy(c.idpel)} className="absolute top-2 right-2 p-1.5 bg-white/5 rounded-lg text-slate-500 hover:text-white transition-all">
                         {copiedId === c.idpel ? <CheckCheck size={12} className="text-green-400" /> : <Copy size={12} />}
                     </button>
@@ -176,7 +184,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
                   <InfoItem icon={Activity} label="NO METER" value={c.no_meter || '-'} />
                 </div>
 
-                <div className="bg-slate-900/40 rounded-2xl p-4 mb-4 border border-white/5">
+                <div className={`rounded-2xl p-4 mb-4 border ${isTarget ? 'bg-yellow-500/5 border-yellow-500/20' : 'bg-slate-900/40 border-white/5'}`}>
                    <div className="flex items-start space-x-3">
                       <MapPin className="text-blue-400 shrink-0 mt-0.5" size={14} />
                       <div className="flex-1">
@@ -211,7 +219,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
 
                 <button 
                   onClick={() => window.open(mapUrl, '_blank')}
-                  className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded-2xl font-black text-[9px] tracking-[0.2em] flex items-center justify-center space-x-2 active:scale-95 transition-all uppercase"
+                  className={`w-full py-4 rounded-2xl font-black text-[9px] tracking-[0.2em] flex items-center justify-center space-x-2 active:scale-95 transition-all uppercase shadow-lg ${isTarget ? 'bg-gradient-to-r from-yellow-600 to-orange-700 text-white' : 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white'}`}
                 >
                   <Compass size={16} className="animate-spin-slow" />
                   <span>NAVIGASI {hasCoords ? 'KOORDINAT' : 'ALAMAT'}</span>
