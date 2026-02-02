@@ -35,7 +35,7 @@ export const Login: React.FC<{ onLogin: (user: User) => void }> = ({ onLogin }) 
         if (user) {
             const currentDeviceId = getDeviceId();
             if (user.deviceId && user.deviceId !== currentDeviceId) {
-              setError('AKUN INI TERKUNCI DI HP LAIN (RISET DI PANEL KONTROL)');
+              setError('AKUN INI TERKUNCI DI DEVICE LAIN (SILAHKAN HUBUNGI ADMINISTRATOR)');
               setLoading(false);
               return;
             }
