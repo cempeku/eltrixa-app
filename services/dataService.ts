@@ -59,7 +59,7 @@ export const api = {
 
   searchCustomers: async (idpel: string): Promise<Customer[]> => {
     if (isConfigured() && supabase) {
-      // 1. Cari target utama secara eksak
+      // 1. Cari target utama
       const { data: target, error: targetErr } = await supabase
         .from('customers')
         .select('*')
@@ -67,12 +67,12 @@ export const api = {
         .single();
       
       if (targetErr || !target) {
-        // Jika tidak ketemu idpel pas, cari yang mirip (parsial)
         const { data: partials } = await supabase.from('customers').select('*').ilike('idpel', `%${idpel}%`).limit(10);
         return partials || [];
       }
 
-      // 2. Ambil 5 SEBELUM (Petugas & Hari Baca sama, row_index lebih kecil)
+      // 2. Ambil tetangga (5 sebelum, 4 sesudah) dengan filter Petugas & Hari Baca yang SAMA
+      // Menggunakan row_index untuk menjamin urutan sesuai buku/excel
       const { data: before } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -81,7 +81,6 @@ export const api = {
         .order('row_index', { ascending: false })
         .limit(5);
 
-      // 3. Ambil 4 SESUDAH (Petugas & Hari Baca sama, row_index lebih besar)
       const { data: after } = await supabase.from('customers')
         .select('*')
         .eq('petugas', target.petugas)
@@ -90,8 +89,8 @@ export const api = {
         .order('row_index', { ascending: true })
         .limit(4);
 
-      // Gabungkan hasil: Before (diurutkan naik) + Target + After
-      const sortedBefore = before ? [...before].sort((a, b) => a.row_index - b.row_index) : [];
+      // Gabungkan: Sebelum (dibalik urutannya agar naik) + Target + Sesudah
+      const sortedBefore = before ? [...before].reverse() : [];
       const finalResults = [...sortedBefore, target, ...(after || [])];
       
       return finalResults;
@@ -117,14 +116,13 @@ export const api = {
         .eq('petugas', usernameLogin)
         .eq('hari_baca', hari);
         
-      // Filter layanan eksak (PASKABAYAR untuk A-G, PRABAYAR untuk lainnya seperti L-R)
       if (isPasca) {
-        query = query.eq('jenis_layanan', 'PASKABAYAR');
+        // Toleransi penulisan PASCABAYAR atau PASKABAYAR
+        query = query.or('jenis_layanan.ilike.PASCABAYAR,jenis_layanan.ilike.PASKABAYAR');
       } else {
         query = query.eq('jenis_layanan', 'PRABAYAR');
       }
 
-      // Selalu urutkan berdasarkan row_index agar Prabayar L M N P Q R tetap rapi sesuai Excel
       const { data, error } = await query.order('row_index', { ascending: true });
       if (error) console.error("Search criteria error:", error);
       return data || [];
@@ -198,48 +196,50 @@ export const api = {
   },
 
   uploadCustomers: async (data: any[], onProgress?: (p: number) => void) => {
+    if (!isConfigured() || !supabase) return;
+    
+    // PENTING: Hapus semua data lama dulu agar row_index dan urutan sinkron dengan Excel baru
+    await supabase.from('customers').delete().neq('idpel', '0');
+
     const batch = data.map((r, i) => ({
       idpel: String(r.IDPEL || r.idpel || '').trim(),
       no_meter: String(r.NO_METER || r.no_meter || '').trim(),
       kddk: String(r.KDDK || r.kddk || '').trim(),
-      hari_baca: String(r.HARI_BACA || r.hari_baca || '').trim(),
-      petugas: String(r.PETUGAS || r.NAMA_PETUGAS || r.nama_petugas || '').trim(),
-      nama: String(r['NAMA PELANGGAN'] || r.nama || '').trim(),
-      alamat: String(r.ALAMAT || r.alamat || '').trim(), // Spasi tengah aman, hanya ujung yang di-trim
-      tarif: String(r.TARIF || r.tarif || '').trim(),
+      hari_baca: String(r.HARI_BACA || r.hari_baca || '').trim().toUpperCase(),
+      petugas: String(r.PETUGAS || r.NAMA_PETUGAS || r.nama_petugas || '').trim().toUpperCase(),
+      nama: String(r['NAMA PELANGGAN'] || r.nama || '').trim().toUpperCase(),
+      alamat: String(r.ALAMAT || r.alamat || '').trim().toUpperCase(),
+      tarif: String(r.TARIF || r.tarif || '').trim().toUpperCase(),
       daya: Number(String(r.DAYA || r.daya || 0).replace(/\D/g, '')),
-      gardu: String(r.GARDU || r.gardu || '').trim(),
-      no_tiang: String(r.NO_TIANG || r.no_tiang || '').trim(),
+      gardu: String(r.GARDU || r.gardu || '').trim().toUpperCase(),
+      no_tiang: String(r.NO_TIANG || r.no_tiang || '').trim().toUpperCase(),
       jenis_layanan: String(r.JENIS_LAYANAN || r.jenis_layanan || '').trim().toUpperCase(),
       status: String(r.STATUS || r.status || 'AKTIF').trim().toUpperCase(),
       koordinat_x: String(r.KOORDINAT_X || r.koordinat_x || '').trim(),
       koordinat_y: String(r.KOORDINAT_Y || r.koordinat_y || '').trim(),
-      row_index: i // Menyimpan urutan fisik file Excel
+      row_index: i // Mengunci urutan sesuai baris di Excel
     }));
-    if (isConfigured() && supabase) {
-      await supabase.from('customers').delete().neq('idpel', '0');
-      await uploadInChunks('customers', batch, onProgress);
-    }
+
+    await uploadInChunks('customers', batch, onProgress);
   },
 
   uploadArrears: async (data: any[], onProgress?: (p: number) => void) => {
+    if (!isConfigured() || !supabase) return;
+    await supabase.from('arrears').delete().neq('idpel', '0');
     const batch = data.map(r => ({
-      petugas: String(r.PETUGAS || r.petugas || '').trim(),
+      petugas: String(r.PETUGAS || r.petugas || '').trim().toUpperCase(),
       idpel: String(r.IDPEL || r.idpel || '').trim(),
-      nama: String(r['NAMA PELANGGAN'] || r.nama || '').trim(),
-      alamat: String(r.ALAMAT || r.alamat || '').trim(),
-      tarif: String(r.TARIF || r.tarif || '').trim(),
+      nama: String(r['NAMA PELANGGAN'] || r.nama || '').trim().toUpperCase(),
+      alamat: String(r.ALAMAT || r.alamat || '').trim().toUpperCase(),
+      tarif: String(r.TARIF || r.tarif || '').trim().toUpperCase(),
       daya: Number(String(r.DAYA || r.daya || 0).replace(/\D/g, '')),
       rptag: Number(String(r.RPTAG || r.rptag || 0).replace(/\D/g, '')),
-      hari: String(r.HARI || r.hari || '').trim(),
-      kddk: String(r.KDDK || r.kddk || '').trim(),
-      gardu: String(r.GARDU || r.gardu || '').trim(),
-      no_tiang: String(r.NO_TIANG || r.no_tiang || '').trim(),
+      hari: String(r.HARI || r.hari || '').trim().toUpperCase(),
+      kddk: String(r.KDDK || r.kddk || '').trim().toUpperCase(),
+      gardu: String(r.GARDU || r.gardu || '').trim().toUpperCase(),
+      no_tiang: String(r.NO_TIANG || r.no_tiang || '').trim().toUpperCase(),
     }));
-    if (isConfigured() && supabase) {
-      await supabase.from('arrears').delete().neq('idpel', '0');
-      await uploadInChunks('arrears', batch, onProgress);
-    }
+    await uploadInChunks('arrears', batch, onProgress);
   },
 
   uploadSettlements: async (idpels: string[], onProgress?: (p: number) => void) => {
@@ -254,17 +254,16 @@ export const api = {
   },
 
   uploadWhitelist: async (idpels: string[], onProgress?: (p: number) => void) => {
-    if (isConfigured() && supabase) {
-      await supabase.from('trxku').delete().neq('idpel', '0');
-      await uploadInChunks('trxku', idpels.map(id => ({ idpel: id.trim() })), onProgress);
-    }
+    if (!isConfigured() || !supabase) return;
+    await supabase.from('trxku').delete().neq('idpel', '0');
+    await uploadInChunks('trxku', idpels.map(id => ({ idpel: id.trim() })), onProgress);
   },
 
   uploadUsers: async (users: any[]) => {
     if (isConfigured() && supabase) {
       await supabase.from('users').upsert(users.map(r => ({
         username: String(r.USERNAME || r.username).trim().toUpperCase(),
-        name: String(r.NAMA || r.nama || r.USERNAME || r.username).trim(),
+        name: String(r.NAMA || r.nama || r.USERNAME || r.username).trim().toUpperCase(),
         role: (String(r.ROLE || r.role).trim().toUpperCase() === 'ADMIN') ? Role.ADMIN : Role.OFFICER,
         password: String(r.PASSWORD || r.password || '123').trim(),
         device_id: null
