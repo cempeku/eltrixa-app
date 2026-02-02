@@ -74,7 +74,7 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
     setLoading(true);
     setSearched(true);
     setCurrentPage(1);
-    setLastSearchedId(''); // Reset target highlight jika mencari berdasarkan hari baca
+    setLastSearchedId(''); 
     
     try {
       const data = await api.searchByCriteria(user.username, selectedDay);
@@ -142,7 +142,6 @@ export const Search: React.FC<SearchProps> = ({ user, setLoading }) => {
         )}
 
         {displayed.map((c, i) => {
-          // Penentu apakah item ini adalah target utama pencarian
           const isTarget = c.idpel === lastSearchedId;
           const hasCoords = c.koordinat_x && c.koordinat_y;
           const mapUrl = hasCoords 
@@ -258,8 +257,8 @@ const InfoItem = ({ icon: Icon, label, value, highlight }: any) => (
 );
 
 const TechnicalBox = ({ label, value }: any) => (
-  <div className="text-center p-2.5 bg-white/[0.02] rounded-xl border border-white/5">
+  <div className="text-center p-2.5 bg-white/[0.02] rounded-xl border border-white/5 flex flex-col justify-center min-h-[50px]">
     <p className="text-[6px] font-black text-slate-600 uppercase tracking-widest mb-0.5">{label}</p>
-    <p className="text-[9px] font-black text-white truncate">{value}</p>
+    <p className="text-[8px] font-black text-white break-all leading-tight">{value}</p>
   </div>
 );
