@@ -1,0 +1,24 @@
+
+{
+  "name": "ELTRIXA PLN Data System",
+  "short_name": "ELTRIXA",
+  "description": "Sistem Pencarian Data Pelanggan dan Entry PLN Mobile",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#020617",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23020617'/%3E%3Cpath d='M100 15 L173.6 57.5 L173.6 142.5 L100 185 L26.4 142.5 L26.4 57.5 Z' stroke='%2306b6d4' stroke-width='4' fill='none'/%3E%3Cpath d='M110 35 L85 95 H115 L90 165' stroke='%2306b6d4' stroke-width='12' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23020617'/%3E%3Cpath d='M100 15 L173.6 57.5 L173.6 142.5 L100 185 L26.4 142.5 L26.4 57.5 Z' stroke='%2306b6d4' stroke-width='4' fill='none'/%3E%3Cpath d='M110 35 L85 95 H115 L90 165' stroke='%2306b6d4' stroke-width='12' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
