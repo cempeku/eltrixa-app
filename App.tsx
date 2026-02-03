@@ -21,37 +21,49 @@ const ECGLine = () => (
 
 const BackgroundLogo = () => (
   <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden select-none z-0">
-    <svg 
-      width="500" 
-      height="500" 
-      viewBox="0 0 200 200" 
-      fill="none" 
-      xmlns="http://www.w3.org/2000/svg"
-      className="animate-pulse-soft text-cyan-500/15"
-    >
-      {/* Outer Hexagon - Structural frame */}
-      <path 
-        d="M100 15 L173.6 57.5 L173.6 142.5 L100 185 L26.4 142.5 L26.4 57.5 Z" 
-        stroke="currentColor" 
-        strokeWidth="1.5" 
-      />
-      {/* Abstract Energy Rhythm (Lightning-like but stylized as a pulse wave) */}
-      <path 
-        d="M110 35 L85 95 H115 L90 165" 
-        stroke="currentColor" 
-        strokeWidth="10"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        className="opacity-40"
-      />
-      {/* Intricate circuitry for technical feel */}
-      <g stroke="currentColor" strokeWidth="0.8" opacity="0.3">
-        <path d="M60 70 H85 M60 100 H80 M60 130 H85 M60 70 V130" />
-        <path d="M140 70 L115 130 M115 70 L140 130" />
-      </g>
-      {/* Center Glow Core */}
-      <circle cx="100" cy="100" r="15" fill="currentColor" className="opacity-10 animate-pulse" />
-    </svg>
+    <div className="relative flex flex-col items-center">
+      {/* Glow Layer - Cahaya neon melingkar yang berdenyut */}
+      <div className="absolute inset-0 bg-cyan-600/15 blur-[140px] rounded-full scale-150 animate-heartbeat"></div>
+      
+      {/* Logo Wrapper Utama */}
+      <div className="relative z-10 animate-pulse-soft">
+        <svg 
+          width="500" 
+          height="500" 
+          viewBox="0 0 200 200" 
+          fill="none" 
+          xmlns="http://www.w3.org/2000/svg"
+          className="text-cyan-500/80 drop-shadow-[0_0_35px_rgba(6,182,212,0.4)]"
+        >
+          {/* Hexagon Frame */}
+          <path 
+            d="M100 15 L173.6 57.5 L173.6 142.5 L100 185 L26.4 142.5 L26.4 57.5 Z" 
+            stroke="currentColor" 
+            strokeWidth="1.5" 
+            strokeOpacity="0.5"
+          />
+          
+          {/* Main Energy Core Lightning Bolt */}
+          <path 
+            d="M110 35 L85 95 H115 L90 165" 
+            stroke="currentColor" 
+            strokeWidth="13"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="opacity-100"
+          />
+          
+          {/* Circuit Tech Details */}
+          <g stroke="currentColor" strokeWidth="1.2" opacity="0.4">
+            <path d="M60 70 H85 M60 100 H80 M60 130 H85 M60 70 V130" />
+            <path d="M140 70 L115 130 M115 70 L140 130" />
+          </g>
+        </svg>
+        <div className="mt-4 text-center">
+          <span className="text-cyan-500/40 text-[10px] font-black tracking-[1.8em] uppercase">POWER SYSTEM ACTIVE</span>
+        </div>
+      </div>
+    </div>
   </div>
 );
 
@@ -107,15 +119,14 @@ const App: React.FC = () => {
 
   return (
     <div className="relative min-h-screen bg-slate-950">
-      {/* BACKGROUND LAYER: FIXED AND LOWEST Z-INDEX */}
+      {/* LAYER LATAR BELAKANG (Z-0): Hanya visual, dipisahkan agar tidak menghalangi tombol */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0 hexagon-grid">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[100vw] h-[100vw] bg-indigo-600/5 rounded-full blur-[140px] animate-heartbeat"></div>
         <BackgroundLogo />
         <div className="absolute top-[15%] w-full opacity-10 ecg-line"><ECGLine /></div>
         <div className="absolute bottom-[15%] w-full opacity-10 ecg-line rotate-180"><ECGLine /></div>
       </div>
 
-      {/* CONTENT LAYER: RELATIVE AND HIGHER Z-INDEX */}
+      {/* LAYER KONTEN (Z-10): Area kerja utama aplikasi */}
       <div className="relative z-10">
         <Layout 
           user={user} 
